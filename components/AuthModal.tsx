@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { X, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { User as UserType } from '../types';
-import { apiService } from '../services/api';
+import { signInWithGoogle, loginWithEmail, registerWithEmail, db } from '../services/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -21,30 +22,81 @@ export default function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthMo
 
   if (!isOpen) return null;
 
+  const handleGoogleLogin = async () => {
+    try {
+      const firebaseUser = await signInWithGoogle();
+      if (firebaseUser) {
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        let user: UserType;
+        if (userDoc.exists()) {
+            user = userDoc.data() as UserType;
+        } else {
+            user = {
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || 'Google User',
+                email: firebaseUser.email || '',
+                role: 'user',
+                profileImage: firebaseUser.photoURL || undefined
+            };
+        }
+        if (onSignup) onSignup(user);
+        else onLogin(user);
+        onClose();
+      }
+    } catch (err: any) {
+      console.error("Google Sign-In Error:", err);
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("Google Sign-In is not enabled. Please enable it in the Firebase Console under Authentication > Sign-in method.");
+      } else {
+        setError(err.message || "Failed to sign in with Google.");
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
     try {
       if (isLogin) {
-        const data = await apiService.login({ email: formData.email, password: formData.password });
-        onLogin(data.user);
+        const firebaseUser = await loginWithEmail(formData.email, formData.password);
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        if (userDoc.exists()) {
+            onLogin(userDoc.data() as UserType);
+        } else {
+            onLogin({
+                id: firebaseUser.uid,
+                name: firebaseUser.displayName || 'Test User',
+                email: firebaseUser.email || formData.email,
+                role: 'user'
+            });
+        }
         onClose();
       } else {
         if (!formData.username || !formData.email || !formData.password) {
           setError('Please fill in all fields');
           return;
         }
-        const data = await apiService.register({ name: formData.username, email: formData.email, password: formData.password });
+        const firebaseUser = await registerWithEmail(formData.email, formData.password);
+        const newUser: UserType = {
+             id: firebaseUser.uid,
+             name: formData.username,
+             email: formData.email,
+             role: formData.email === 'admin@hmart.com' ? 'admin' : 'user'
+        };
         if (onSignup) {
-          onSignup(data.user);
+          onSignup(newUser);
         } else {
-          onLogin(data.user);
+          onLogin(newUser);
         }
         onClose();
       }
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      if (err.code === 'auth/operation-not-allowed') {
+        setError("Email/Password login is not enabled. Please enable it in the Firebase Console under Authentication > Sign-in method.");
+      } else {
+        setError(err.message || 'Authentication failed');
+      }
     }
   };
 
@@ -60,7 +112,7 @@ export default function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthMo
           <div className="text-center mb-8">
             <h2 className="text-3xl font-black text-[#155e37] dark:text-emerald-400 mb-2">H Mart</h2>
             <p className="text-gray-500 dark:text-gray-400">
-              {isLogin ? 'Welcome back! Please login (MERN Stack API).' : 'Create a new account (MERN Stack API).'}
+              {isLogin ? 'Welcome back! Please login.' : 'Create a new account.'}
             </p>
           </div>
 
@@ -70,6 +122,23 @@ export default function AuthModal({ isOpen, onClose, onLogin, onSignup }: AuthMo
               {error}
             </div>
           )}
+
+          <div className="space-y-4 mb-4">
+             <button 
+               onClick={handleGoogleLogin}
+               type="button"
+               className="w-full h-12 border border-gray-300 dark:border-gray-600 rounded-xl flex items-center justify-center gap-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors bg-white dark:bg-gray-800 cursor-pointer"
+             >
+               <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+               <span className="text-gray-700 dark:text-gray-200 font-bold">Sign in with Google</span>
+             </button>
+             
+             <div className="flex items-center gap-3">
+                 <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+                 <span className="text-sm text-gray-400 font-medium uppercase tracking-wider">or sign in with email</span>
+                 <div className="h-px bg-gray-200 dark:bg-gray-700 flex-1"></div>
+             </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4 mt-4">
             {/* Email Field */}

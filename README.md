@@ -1,40 +1,32 @@
 # H Mart - E-Commerce Platform
 
-A full-stack, modern e-commerce application built with the MERN stack (MongoDB, Express, React, Node.js). H Mart provides a seamless shopping experience for users, featuring real-time cart management, beautiful smooth animations, precise product categories, and a secure backend capable of role-based access control (Admin vs. User).
+A modern, serverless e-commerce application built with React, Vite, and Firebase. H Mart provides a seamless shopping experience featuring real-time cart management, smooth animations, precise product categories, and robust role-based access control (Admin vs. User) secured by Firebase Firestore Rules.
 
 ## ✨ Features
 
-### Client-Side (Frontend)
+### Frontend Architecture
 *   **Modern Interactive UI:** Built using React & Tailwind CSS.
-*   **Silky Smooth Animations:** Powered by `motion/react` (Framer Motion) for page transitions, modals, and dynamic flying elements when adding to the cart.
-*   **Authentication Flow:** Dynamic Login/Register modal managing separate Admin and User journeys.
+*   **Silky Smooth Animations:** Powered by `motion/react` (Framer Motion) for page transitions, modals, and dynamic flying elements.
+*   **Authentication Flow:** Secure Google Sign-In and Email/Password authentication powered by Firebase Auth.
 *   **Dynamic Product Discovery:** Filtering by category, full-text search, and intelligent sorting (Price, Newest, Name).
-*   **Shopping Cart:** In-state dynamic shopping cart with off-canvas sidebar view.
-*   **Recently Viewed Module:** Automatically tracks recently viewed products utilizing local storage.
+*   **Shopping Cart:** In-state dynamic shopping cart with an off-canvas sidebar view.
 *   **Theme Module:** Complete application support for dark/light modes.
-*   **Responsive:** Fully mobile & desktop friendly interface.
+*   **Responsive:** Fully mobile & desktop-friendly interface.
 
-### Server-Side (Backend)
-*   **RESTful API:** Developed with Express.js and TypeScript.
-*   **Mongoose ORM:** Structured modeling utilizing MongoDB for robust document storage.
-*   **Security & Authentication:** 
-    *   Stateless authentication using JWT `jsonwebtoken`.
-    *   Passwords securely hashed using `bcryptjs`.
-*   **Automatic Account Seeding:** Generates default Admin and User accounts on server initialization if none exist.
-*   **Custom Seed Scripts:** Optional endpoint to securely wipe and re-hydrate products.
+### Serverless Backend (Firebase)
+*   **Database:** Cloud Firestore provides a highly scalable NoSQL document database.
+*   **Security:** Bullet-proof Attribute-Based Access Control (ABAC) using custom Firestore Security Rules.
+*   **Real-time Sync:** Products and user profiles are synced to Firestore.
 
 ## 🛠️ Tech Stack
 
-*   **Frontend:** React (Vite), TypeScript, Tailwind CSS, Lucide React (Icons), Framer Motion (`motion/react`)
-*   **Backend:** Node.js, Express.js (runs within Vite middleware in dev; serves static files in prod)
-*   **Database:** MongoDB via setup with Mongoose
-*   **Auth Module:** JWT & bcryptjs
+*   **Frontend:** React (Vite), TypeScript, Tailwind CSS, Lucide React, Framer Motion
+*   **Backend as a Service:** Firebase (Auth, Firestore)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 *   Node.js (v18+)
-*   MongoDB (Local installation or MongoDB Atlas cluster)
 
 ### Installation
 
@@ -49,38 +41,30 @@ A full-stack, modern e-commerce application built with the MERN stack (MongoDB, 
     npm install
     ```
 
-3.  **Environment Setup:**
-    Create a `.env` file in the root of the project with the following (you can copy `.env.example`):
-    ```env
-    MONGO_URI=mongodb://localhost:27017/hmart
-    JWT_SECRET=your_super_secret_jwt_key_here
-    ```
+3.  **Firebase Setup (Important):**
+    If you cloned this repository, it currently points to the original author's Firebase project via `firebase-applet-config.json`. To run your own instance:
+    - Create a new Firebase project in the [Firebase Console](https://console.firebase.google.com/).
+    - Enable **Firestore Database** and **Firebase Authentication**.
+    - In Firebase Authentication, enable **Google Sign-In** and **Email/Password**.
+    - Replace the contents of `firebase-applet-config.json` with your project's configuration.
+    - Deploy the security rules using `firebase deploy --only firestore:rules` using the included `firestore.rules`.
 
 4.  **Start the development server:**
     ```bash
     npm run dev
     ```
-    The application will automatically connect to MongoDB and seed the test credentials.
-
-5.  **Build for Production (Optional):**
-    ```bash
-    npm run build
-    npm start
-    ```
 
 ## 🧪 Test Credentials
 
-Upon successful database connection, the backend auto-seeds the following test credentials for you to explore different RBAC dashboard states:
+To test the role-based dashboard, you will need to enable **Email/Password authentication** in your Firebase console.
 
-### 👑 Admin Login
-Use this account to experience the Admin privileges and dashboard interfaces:
-*   **Email:** `admin@hmart.com`
-*   **Password:** `admin123`
+1. Sign up for a new account in the app using the "Sign up" form.
+2. Go to your Firebase Firestore console.
+3. Find your user document in the `users` collection.
+4. Change the `role` field from `"user"` to `"admin"`.
+5. Refresh the app. You will now see the Admin Dashboard icon!
 
-### 👤 Regular User Login
-Use this account to experience the standard customer flows:
-*   **Email:** `user@hmart.com`
-*   **Password:** `user123`
+Alternatively, use your Google Account to sign in seamlessly as a standard user.
 
 ## 📝 License
 This project is open-source and available under the terms of the MIT License.

@@ -14,7 +14,8 @@ import EditProductModal from './components/EditProductModal';
 import UserProfileModal from './components/UserProfileModal';
 import { MOCK_PRODUCTS, CATEGORIES, DEFAULT_USERS, DEFAULT_SLIDES, DEFAULT_SIDE_BANNERS } from './constants';
 import { Product, CartItem, Category, SortOption, User, HeroSlide, SideBanner } from './types';
-import { apiService } from './services/api';
+import { db } from './services/firebase';
+import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 
 // Animation Component - Slowed Down
 const FlyingItem: React.FC<{ src: string, start: {x: number, y: number}, end: {x: number, y: number}, onComplete: () => void }> = ({ src, start, end, onComplete }) => {
@@ -153,7 +154,11 @@ const App: React.FC = () => {
   useEffect(() => {
     const loadProducts = async () => {
       try {
-        const fetchedProducts = await apiService.getProducts();
+        const querySnapshot = await getDocs(collection(db, 'products'));
+        const fetchedProducts = querySnapshot.docs.map(doc => ({
+           id: doc.id,
+           ...doc.data()
+        })) as Product[];
         if (fetchedProducts && fetchedProducts.length > 0) {
           setProducts(fetchedProducts);
         } else {
@@ -275,10 +280,24 @@ const App: React.FC = () => {
     setSearchQuery(''); 
   };
 
-  const handleLogin = (newUser: User) => { 
+  const handleLogin = async (newUser: User) => { 
     setUser(newUser); 
     setIsAuthModalOpen(false); 
     setIsOnboardingOpen(true); 
+
+    // Sync user profile to Firestore
+    try {
+      await setDoc(doc(db, 'users', newUser.id), {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+        profileImage: newUser.profileImage || null,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    } catch (error) {
+      console.error("Error syncing user to Firestore:", error);
+    }
   };
   const handleSignup = (newUser: User) => { setUsers(prev => [...prev, newUser]); handleLogin(newUser); };
   const handleLogout = () => { setUser(null); setIsAccountMenuOpen(false); setIsAdminDashboardOpen(false); setCartItems([]); };

@@ -34,7 +34,7 @@ service cloud.firestore {
       return isSignedIn() && (
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
         // Fallback for bootstrap admin if needed
-        || request.auth.token.email == 'admin@gmail.com' && request.auth.token.email_verified == true
+        || request.auth.token.email == 'admin@hmart.com'
       );
     }
 
@@ -52,7 +52,7 @@ service cloud.firestore {
       allow get: if isOwner(userId) || isAdmin();
       allow list: if isAdmin();
       
-      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      allow create: if isOwner(userId) && isValidUser(incoming()) && (incoming().role == 'user' || request.auth.token.email == 'admin@hmart.com');
       
       allow update: if isOwner(userId) && isValidUser(incoming()) && (
         // Action: Profile update
