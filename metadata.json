@@ -1,0 +1,8 @@
+{
+  "name": "H Mart",
+  "description": "A clean, modern grocery shopping interface with AI-powered assistance.",
+  "requestFramePermissions": [
+    "geolocation"
+  ],
+  "majorCapabilities": []
+}

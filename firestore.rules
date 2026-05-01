@@ -1,0 +1,85 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default-deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Role-based helper (explicit lookup)
+    function isAdmin() {
+      // In this app, we might store role in the user document
+      return isSignedIn() && (
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        // Fallback for bootstrap admin if needed
+        || request.auth.token.email == 'admin@gmail.com' && request.auth.token.email_verified == true
+      );
+    }
+
+    // --- Collection: Users ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['id', 'name', 'email', 'role']) 
+          && data.id is string && data.id == request.auth.uid
+          && data.name is string && data.name.size() <= 100
+          && data.email is string && data.email.size() <= 100
+          && data.role in ['user', 'admin']
+          && (data.get('profileImage', '') is string);
+      }
+
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      
+      allow update: if isOwner(userId) && isValidUser(incoming()) && (
+        // Action: Profile update
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'profileImage', 'updatedAt'])
+      ) || (isAdmin() && isValidUser(incoming()));
+      
+      allow delete: if isAdmin();
+    }
+
+    // --- Collection: Products ---
+    match /products/{productId} {
+      function isValidProduct(data) {
+        return data.name is string && data.name.size() <= 200
+          && data.price is number && data.price >= 0
+          && data.category is string
+          && data.image is string
+          && data.unit is string
+          && data.inStock is bool;
+      }
+
+      allow read: if true; // Public read for products
+      
+      allow create: if isAdmin() && isValidProduct(incoming());
+      
+      allow update: if isAdmin() && isValidProduct(incoming());
+      
+      allow delete: if isAdmin();
+    }
+  }
+}
